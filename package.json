@@ -1,0 +1,23 @@
+{
+  "name": "database-and-cloud-system-code",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000D\u0000a\u0000t\u0000a\u0000b\u0000a\u0000s\u0000e\u0000-\u0000a\u0000n\u0000d\u0000-\u0000C\u0000l\u0000o\u0000u\u0000d\u0000-\u0000S\u0000y\u0000s\u0000t\u0000e\u0000m\u0000-\u0000-\u0000-\u0000B\u0000E\u0000R\u0000R\u00002\u00002\u00004\u00003\u0000\r\u0000 \u0000\r\u0000 \u0000E\u0000x\u0000e\u0000r\u0000c\u0000i\u0000s\u0000e\u0000 \u00001\u0000:\u0000 \u0000w\u0000e\u0000e\u0000k\u0000 \u00001\u0000",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/darkimm/Database-and-Cloud-System---BERR2243.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/darkimm/Database-and-Cloud-System---BERR2243/issues"
+  },
+  "homepage": "https://github.com/darkimm/Database-and-Cloud-System---BERR2243#readme",
+  "dependencies": {
+    "mongodb": "^6.15.0"
+  }
+}
