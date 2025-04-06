@@ -17,13 +17,13 @@ const drivers = [
 
 console.log(drivers); //show the data in console
 
-drivers.forEach((name) => console.log(name));
+drivers.forEach((Element) => console.log(Element));
 
 drivers.push({
-    name: "Alice Smith",
+    name: "Alice",
         vehicleType: "SUV",
-        isAvailable: false,
-        rating: 4.5
+        isAvailable: true,
+        rating: 4.6
 });
 
 async function main(){
@@ -36,21 +36,37 @@ async function main(){
         console.log("Connected to MongoDB!");
 
         const db = client.db("testDB");
-        const collection = db.collection("users");
+        const driversCollection = db.collection("drivers");
 
-        //insert document
-        await collection.insertOne({ name: "Hakim", age : 22});
-        console.log("Document inserted!");
+        for (const driver of drivers) {
+            const result = await driversCollection.insertOne(driver);       //forEach doesn't work with async, so i have to change to loop
+            console.log(`New driver created with result: ${result}`);
+        }
 
-        //Query the document
-        const result = await collection.findOne({ name: "Hakim"});
-        console.log("Query result:", result);
-    } catch(err) {
+        const updateResult = await db.collection('drivers').updateMany(
+            {name: "John Doe"},
+            {$inc: {rating: 0.1}}
+        );
+        console.log(`Driver updated with result: ${updateResult}`);
+
+
+        const availableDrivers = await db.collection('drivers').find({
+            isAvailable:true,
+            rating: {$gte: 4.5}
+        }).toArray();
+        console.log("Available drivers:", availableDrivers);
+
+        const deleteResult = await db.collection('drivers').deleteMany({isAvailable: false})
+            console.log(`Driver deleted with result: ${deleteResult}`);
+
+    } 
+    catch(err) {
         console.error("Error:", err);
-    } finally {
+    }
+    
+    finally {
         await client.close();
     }
 }
 
 main();
-// 
