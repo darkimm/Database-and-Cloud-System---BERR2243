@@ -1,5 +1,31 @@
 const { MongoClient } = require('mongodb');
 
+const drivers = [
+    {
+        name: "John Doe",
+        vehicleType: "Sedan",
+        isAvailable: true,
+        rating: 4.8
+    },
+    {
+        name: "Alice Smith",
+        vehicleType: "SUV",
+        isAvailable: false,
+        rating: 4.5
+    }
+];
+
+console.log(drivers); //show the data in console
+
+drivers.forEach((name) => console.log(name));
+
+drivers.push({
+    name: "Alice Smith",
+        vehicleType: "SUV",
+        isAvailable: false,
+        rating: 4.5
+});
+
 async function main(){
 
     const uri = "mongodb://localhost:27017"
@@ -27,3 +53,4 @@ async function main(){
 }
 
 main();
+// 
