@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/darkimm/Database-and-Cloud-System---BERR2243#readme",
   "dependencies": {
+    "express": "^5.1.0",
     "mongodb": "^6.15.0"
   }
 }

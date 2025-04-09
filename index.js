@@ -1,32 +1,13 @@
-const { MongoClient } = require('mongodb');
+const express = require('express');
+const { MongoClient, ObjectId } = require('mongodb');
+const port = 3000;
 
-const drivers = [
-    {
-        name: "John Doe",
-        vehicleType: "Sedan",
-        isAvailable: true,
-        rating: 4.8
-    },
-    {
-        name: "Alice Smith",
-        vehicleType: "SUV",
-        isAvailable: false,
-        rating: 4.5
-    }
-];
+const app = express();
+app.use(express.json());
 
-console.log(drivers); //show the data in console
+let db;
 
-drivers.forEach((Element) => console.log(Element));
-
-drivers.push({
-    name: "Alice",
-        vehicleType: "SUV",
-        isAvailable: true,
-        rating: 4.6
-});
-
-async function main(){
+async function connectToMongoDB(){
 
     const uri = "mongodb://localhost:27017"
     const client = new MongoClient(uri);
@@ -35,38 +16,65 @@ async function main(){
         await client.connect();
         console.log("Connected to MongoDB!");
 
-        const db = client.db("testDB");
-        const driversCollection = db.collection("drivers");
-
-        for (const driver of drivers) {
-            const result = await driversCollection.insertOne(driver);       //forEach doesn't work with async, so i have to change to loop
-            console.log(`New driver created with result: ${result}`);
-        }
-
-        const updateResult = await db.collection('drivers').updateMany(
-            {name: "John Doe"},
-            {$inc: {rating: 0.1}}
-        );
-        console.log(`Driver updated with result: ${updateResult}`);
-
-
-        const availableDrivers = await db.collection('drivers').find({
-            isAvailable:true,
-            rating: {$gte: 4.5}
-        }).toArray();
-        console.log("Available drivers:", availableDrivers);
-
-        const deleteResult = await db.collection('drivers').deleteMany({isAvailable: false})
-            console.log(`Driver deleted with result: ${deleteResult}`);
-
-    } 
-    catch(err) {
-        console.error("Error:", err);
+        db = client.db("testDB");
     }
-    
-    finally {
-        await client.close();
+    catch(err){
+        console.error("Error:",err);
     }
 }
+connectToMongoDB();
 
-main();
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
+
+//GET /rides - Fetch All rides
+app.get('/rides',async(req, res) => {
+    try{
+        const rides = await db.collection ('rides').find().toArray();
+        res.status(200).json(rides);
+    }catch(err){
+        res.status(500).json({error: "Failed to fetch rides"});
+    }
+});
+
+app.post('/rides', async(req, res) => {
+    try {
+        const result = await db.collection('rides').insertOne(req.body);
+        res.status(201).json({id: result.insertedId});
+    }catch(err) {
+        res.status(400).json({error: "Invalid ride data"});
+    }
+});
+app.put('/rides/:id', async(req, res) => {
+    try{
+        const result = await db.collection('rides').updateOne (
+            {_id: new ObjectId(req.params.id)},
+            {$set: { status: req.body.status}}
+        );
+
+        if( result.modifiedCount === 0) {
+            return res.status(404).json({ error:"Ride not found"});
+        }
+        res.status(200).json({ updated: result.modifiedCount});
+    }
+    catch(err) {
+        res.status(400).json({ error: "Invalid ride ID or data"});
+    }
+});
+
+app.delete('/rides/:id', async (req, res) => {
+    try{
+        const result = await db.collection('rides').deleteOne (
+            {_id: new ObjectId(req.params.id)},
+        );
+
+        if( result.deletedCount === 0) {
+            return res.status(404).json({ error:"Ride not found"});
+        }
+        res.status(200).json({ deleted: result.deletedCount});
+    }
+    catch(err) {
+        res.status(400).json({ error: "Invalid ride ID"});
+    }
+});
