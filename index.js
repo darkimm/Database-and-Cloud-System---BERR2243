@@ -1,11 +1,11 @@
 const express = require('express');
-const cors = require('cors');
+const cors = require('cors'); 
 const { MongoClient, ObjectId } = require('mongodb');
 const path = require('path');
 const port = 3000;
 
 const app = express();
-app.use(cors()); 
+app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -25,7 +25,6 @@ async function connectToMongoDB() {
 }
 connectToMongoDB();
 
-// Optional: redirect root to index.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
