@@ -3,6 +3,11 @@ const cors = require('cors');
 const { MongoClient, ObjectId} = require('mongodb');
 const path = require('path');
 const port = 3000;
+const bcrypt = require ('bcrypt');
+const saltRounds = 10;
+const jwt = require ('jsonwebtoken');
+require('dotenv').config();
+
 
 const app = express();
 app.use(cors()); 
@@ -46,6 +51,8 @@ app.post('/register', async (req, res) => {
     }
 
     try {
+        const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+        const user = {...req.body, password: hashedPassword};
         const existing = await db.collection('users').findOne({ email });
         if (existing) {
             return res.status(409).json({ error: 'User already exists' });
@@ -54,7 +61,7 @@ app.post('/register', async (req, res) => {
         const result = await db.collection('users').insertOne({
             username,
             email,
-            password,
+            password: hashedPassword,
             role,
             createdAt: new Date()
         });
@@ -75,13 +82,19 @@ app.post('/auth/login', async (req, res) => {
     }
 
     try {
-        const user = await db.collection('users').findOne({ email, password });
+        const user = await db.collection('users').findOne({ email });
 
-        if (!user) {
+        if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
+        const token = jwt.sign(
+            {userId: user._id, role: user.role},
+            process.env.JWT_SECRET,
+            {expiresIn: '1h'}
+        );
 
         res.status(200).json({
+            token,
             message: 'Login successful',
             userId: user._id,
             username: user.username,
@@ -95,17 +108,17 @@ app.post('/auth/login', async (req, res) => {
 });
 
 app.post('/rides', async (req, res) => {
-    const { customerId, pickupLocation, dropoffLocation, scheduledTime } = req.body;
+    const { customerId, pickupLocation, destination, scheduledTime } = req.body;
 
     // Basic validation
-    if (!customerId || !pickupLocation || !dropoffLocation) {
-        return res.status(400).json({ error: 'Missing required fields: customerId, pickupLocation, dropoffLocation' });
+    if (!customerId || !pickupLocation || !destination) {
+        return res.status(400).json({ error: 'Missing required fields: customerId, pickupLocation, destination' });
     }
 
     const ride = {
         customerId: customerId,
         pickupLocation: pickupLocation,
-        dropoffLocation: dropoffLocation,
+        destination: destination,
         scheduledTime: scheduledTime ? new Date(scheduledTime) : new Date(),
         status: 'pending',
         createdAt: new Date()
@@ -122,6 +135,28 @@ app.post('/rides', async (req, res) => {
         res.status(500).json({ error: 'Failed to book ride' });
     }
 });
+
+///RBAC middleware
+const authenticate = (req, res, next) =>{
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) return res.status(401).json({error: "Unauthorized"});
+
+    try{
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    }
+    catch(err){
+        res.status(401).json({ error: "Invalid token"});
+    }
+};
+
+const authorize = (roles) => (req, res, next) => {
+    if (!roles.includes(req.user.role))
+        return res.status(403).json({error: "Forbidden"});
+    next();
+};
 
 //----------------------End User------------------------//
 
@@ -234,7 +269,7 @@ app.put('/users/:id', async (req, res) => {
     }
 });
 
-app.delete('/users/:id', async (req, res) => {
+app.delete('/admin/users/:id', authenticate, authorize(['admin']), async (req, res) => {
     try {
         const result = await db.collection('users').deleteOne({
             _id: new ObjectId(req.params.id)
@@ -250,6 +285,7 @@ app.delete('/users/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to delete user' });
     }
 });
+
 
 //_______________________________ADMIN_________________________________//
 
