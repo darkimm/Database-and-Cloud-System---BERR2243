@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RideX Passenger Analytics</title>
+
+  <!-- Tailwind via CDN (good for quick demo) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <h1 class="text-3xl font-bold text-center my-8">RideX Analytics Dashboard</h1>
+
+  <!-- Summary cards -->
+  <div id="summaryCards"
+       class="grid gap-6 max-w-6xl mx-auto px-4 sm:grid-cols-2 lg:grid-cols-4"></div>
+
+  <!-- Chart -->
+  <div class="max-w-4xl mx-auto my-10 bg-white p-6 rounded-2xl shadow">
+    <canvas id="rideChart" height="100"></canvas>
+  </div>
+
+  <!-- Table -->
+  <div class="max-w-6xl mx-auto mb-10 bg-white p-6 rounded-2xl shadow overflow-x-auto">
+    <h2 class="text-xl font-semibold mb-4">Passenger Summary Table</h2>
+    <table class="min-w-full text-sm" id="analyticsTable">
+      <thead>
+        <tr class="bg-blue-600 text-white">
+          <th class="px-4 py-2 text-left">Name</th>
+          <th class="px-4 py-2">Total Rides</th>
+          <th class="px-4 py-2">Total Fare (RM)</th>
+          <th class="px-4 py-2">Avg Distance (km)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    // Fetch analytics and build dashboard
+    async function init() {
+      const res = await fetch('/analytics/passengers');
+      const data = await res.json();
+
+      buildSummaryCards(data);
+      buildChart(data);
+      buildTable(data);
+    }
+
+    function buildSummaryCards(data) {
+      const totalPassengers = data.length;
+      const totalRides      = data.reduce((s, d) => s + d.totalRides, 0);
+      const totalFare       = data.reduce((s, d) => s + d.totalFare , 0);
+      const avgDistance     = (
+        data.reduce((s, d) => s + d.avgDistance, 0) / totalPassengers || 0
+      ).toFixed(2);
+
+      const cards = [
+        { title: 'Total Passengers', value: totalPassengers },
+        { title: 'Total Rides',      value: totalRides },
+        { title: 'Total Fare',       value: `RM ${totalFare.toFixed(2)}` },
+        { title: 'Avg Distance',     value: `${avgDistance} km` },
+      ];
+
+      const container = document.getElementById('summaryCards');
+      cards.forEach(c => {
+        container.insertAdjacentHTML('beforeend', `
+          <div class="bg-white rounded-2xl shadow p-6 text-center">
+            <p class="text-sm text-gray-500 uppercase">${c.title}</p>
+            <p class="text-2xl font-bold text-blue-600">${c.value}</p>
+          </div>
+        `);
+      });
+    }
+
+    function buildChart(data) {
+      const ctx = document.getElementById('rideChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.map(d => d.name),
+          datasets: [{
+            label: 'Total Rides',
+            data: data.map(d => d.totalRides),
+          }],
+        },
+        options: {
+          plugins: {
+            legend: { display: false },
+            title:  { display: true, text: 'Total Rides by Passenger' },
+          },
+          responsive: true,
+          scales: { y: { beginAtZero: true } },
+        },
+      });
+    }
+
+    function buildTable(data) {
+      const tbody = document.querySelector('#analyticsTable tbody');
+      data.forEach(d => {
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr class="odd:bg-gray-50">
+            <td class="px-4 py-2 font-medium">${d.name}</td>
+            <td class="px-4 py-2 text-center">${d.totalRides}</td>
+            <td class="px-4 py-2 text-center">${d.totalFare.toFixed(2)}</td>
+            <td class="px-4 py-2 text-center">${d.avgDistance.toFixed(2)}</td>
+          </tr>
+        `);
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

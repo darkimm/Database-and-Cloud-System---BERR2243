@@ -6,6 +6,7 @@ const port = 3000;
 const bcrypt = require ('bcrypt');
 const saltRounds = 10;
 const jwt = require ('jsonwebtoken');
+const { pipeline } = require('stream');
 require('dotenv').config();
 
 
@@ -24,6 +25,7 @@ async function connectToMongoDB() {
         await client.connect();
         console.log("✅ Connected to MongoDB!");
         db = client.db("week4DB");
+        app.locals.db = db;
     } catch (err) {
         console.error("❌ MongoDB connection error:", err);
     }
@@ -108,11 +110,18 @@ app.post('/auth/login', async (req, res) => {
 });
 
 app.post('/rides', async (req, res) => {
-    const { customerId, pickupLocation, destination, scheduledTime } = req.body;
+    const { customerId, pickupLocation, destination, distance, fare, scheduledTime } = req.body;
 
-    // Basic validation
-    if (!customerId || !pickupLocation || !destination) {
+    if (!customerId || !pickupLocation || !destination || !distance == null || !fare == null) {
         return res.status(400).json({ error: 'Missing required fields: customerId, pickupLocation, destination' });
+    }
+
+    if(typeof distance !== 'number' || distance <= 0) {
+        return res.status(400).json({ error: 'Distance must be positive number' });
+    }
+
+    if(typeof fare !== 'number' || fare <= 0) {
+        return res.status(400).json({ error: 'Distance must be positive number' });
     }
 
     const ride = {
@@ -120,6 +129,8 @@ app.post('/rides', async (req, res) => {
         pickupLocation: pickupLocation,
         destination: destination,
         scheduledTime: scheduledTime ? new Date(scheduledTime) : new Date(),
+        distance: distance,
+        fare: fare,
         status: 'pending',
         createdAt: new Date()
     };
@@ -134,6 +145,37 @@ app.post('/rides', async (req, res) => {
         console.error(err);
         res.status(500).json({ error: 'Failed to book ride' });
     }
+});
+
+app.get('/analytics/passengers', async (req, res, next) => {
+  try {
+    const db = req.app.locals.db;
+
+    const pipeline = [
+      {
+        $group: {
+          _id: '$customerId',
+          totalRides: { $sum: 1 },
+          totalFare: { $sum: '$fare' },
+          avgDistance: { $avg: '$distance' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          name: '$_id',
+          totalRides: 1,
+          totalFare: 1,
+          avgDistance: { $round: ['$avgDistance', 2] },
+        },
+      },
+    ];
+
+    const result = await db.collection('rides').aggregate(pipeline).toArray();
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
 });
 
 ///RBAC middleware
